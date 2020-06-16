@@ -33,7 +33,7 @@ inline Location operator"" _loc(const char* str, size_t size) {
 	return Location{ StringRef(reinterpret_cast<const uint8_t*>(str), size) };
 }
 
-struct SpanImpl {
+struct SpanImpl : FastAllocated<SpanImpl> {
 	explicit SpanImpl(UID contex, Location location,
 	                  std::unordered_set<UID> const& parents = std::unordered_set<UID>());
 	SpanImpl(const SpanImpl&) = delete;
