@@ -42,11 +42,11 @@ namespace PTreeImpl {
 	template<class T>
 	struct PTree : public ReferenceCounted<PTree<T>>, FastAllocated<PTree<T>>, NonCopyable {
 		uint32_t priority;
-		Reference<PTree> pointer[3];
 		Version lastUpdateVersion;
 		bool updated;
 		bool replacedPointer;
 		T data;
+		Reference<PTree> pointer[3];
 
 		Reference<PTree> child(bool which, Version at) const {
 			if (updated && lastUpdateVersion<=at && which == replacedPointer)
