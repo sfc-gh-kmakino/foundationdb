@@ -286,6 +286,10 @@ else()
       -Wno-unused-parameter
       -Wno-self-assign
       )
+    add_compile_options(
+      -flto
+      -fwhole-program-vtables
+    )
     if (USE_CCACHE)
       add_compile_options(
         -Wno-register
