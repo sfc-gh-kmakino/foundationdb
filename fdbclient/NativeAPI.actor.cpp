@@ -1170,7 +1170,7 @@ ACTOR Future< pair<KeyRange,Reference<LocationInfo>> > getKeyLocation_internal( 
 		++cx->transactionKeyServerLocationRequests;
 		choose {
 			when ( wait( cx->onMasterProxiesChanged() ) ) {}
-			when ( GetKeyServerLocationsReply rep = wait( loadBalance( cx->getMasterProxies(info.useProvisionalProxies), &MasterProxyInterface::getKeyServersLocations, GetKeyServerLocationsRequest(key, Optional<KeyRef>(), 100, isBackward, key.arena()), TaskPriority::DefaultPromiseEndpoint ) ) ) {
+			when ( GetKeyServerLocationsReply rep = wait( loadBalance( cx->getMasterProxies(info.useProvisionalProxies), &MasterProxyInterface::getKeyServersLocations, GetKeyServerLocationsRequest(key, Optional<KeyRef>(), 100, isBackward, key.arena()), info.taskID ) ) ) {
 				++cx->transactionKeyServerLocationRequestsCompleted;
 				if( info.debugID.present() )
 					g_traceBatch.addEvent("TransactionDebug", info.debugID.get().first(), "NativeAPI.getKeyLocation.After");
@@ -1209,7 +1209,7 @@ ACTOR Future< vector< pair<KeyRange,Reference<LocationInfo>> > > getKeyRangeLoca
 		++cx->transactionKeyServerLocationRequests;
 		choose {
 			when ( wait( cx->onMasterProxiesChanged() ) ) {}
-			when ( GetKeyServerLocationsReply _rep = wait( loadBalance( cx->getMasterProxies(info.useProvisionalProxies), &MasterProxyInterface::getKeyServersLocations, GetKeyServerLocationsRequest(keys.begin, keys.end, limit, reverse, keys.arena()), TaskPriority::DefaultPromiseEndpoint ) ) ) {
+			when ( GetKeyServerLocationsReply _rep = wait( loadBalance( cx->getMasterProxies(info.useProvisionalProxies), &MasterProxyInterface::getKeyServersLocations, GetKeyServerLocationsRequest(keys.begin, keys.end, limit, reverse, keys.arena()), info.taskID ) ) ) {
 				++cx->transactionKeyServerLocationRequestsCompleted;
 				state GetKeyServerLocationsReply rep = _rep;
 				if( info.debugID.present() )
@@ -1340,7 +1340,7 @@ ACTOR Future<Optional<Value>> getValue( Future<Version> version, Key key, Databa
 					when(wait(cx->connectionFileChanged())) { throw transaction_too_old(); }
 					when(GetValueReply _reply =
 							wait(loadBalance(ssi.second, &StorageServerInterface::getValue,
-											GetValueRequest(key, ver, getValueID), TaskPriority::DefaultPromiseEndpoint, false,
+											GetValueRequest(key, ver, getValueID), info.taskID, false,
 											cx->enableLocalityLoadBalance ? &cx->queueModel : nullptr))) {
 						reply = _reply;
 					}
@@ -1423,7 +1423,7 @@ ACTOR Future<Key> getKey( Database cx, KeySelector k, Future<Version> version, T
 					when(wait(cx->connectionFileChanged())) { throw transaction_too_old(); }
 					when(GetKeyReply _reply =
 							wait(loadBalance(ssi.second, &StorageServerInterface::getKey, GetKeyRequest(k, version.get()),
-											TaskPriority::DefaultPromiseEndpoint, false,
+											info.taskID, false,
 											cx->enableLocalityLoadBalance ? &cx->queueModel : nullptr))) {
 						reply = _reply;
 					}
@@ -1512,7 +1512,7 @@ ACTOR Future<Void> watchValue(Future<Version> version, Key key, Optional<Value> 
 			choose {
 				when(WatchValueReply r = wait(loadBalance(ssi.second, &StorageServerInterface::watchValue,
 				                                          WatchValueRequest(key, value, ver, watchValueID),
-				                                          TaskPriority::DefaultPromiseEndpoint))) {
+				                                          info.taskID))) {
 					resp = r;
 				}
 				when(wait(cx->connectionFile ? cx->connectionFile->onChange() : Never())) { wait(Never()); }
@@ -1615,7 +1615,7 @@ ACTOR Future<Standalone<RangeResultRef>> getExactRange( Database cx, Version ver
 						when(wait(cx->connectionFileChanged())) { throw transaction_too_old(); }
 						when(GetKeyValuesReply _rep =
 								wait(loadBalance(locations[shard].second, &StorageServerInterface::getKeyValues, req,
-												TaskPriority::DefaultPromiseEndpoint, false,
+												info.taskID, false,
 												cx->enableLocalityLoadBalance ? &cx->queueModel : nullptr))) {
 							rep = _rep;
 						}
@@ -1909,7 +1909,7 @@ ACTOR Future<Standalone<RangeResultRef>> getRange( Database cx, Reference<Transa
 								transaction_too_old(), future_version()
 									});
 					}
-					GetKeyValuesReply _rep = wait( loadBalance(beginServer.second, &StorageServerInterface::getKeyValues, req, TaskPriority::DefaultPromiseEndpoint, false, cx->enableLocalityLoadBalance ? &cx->queueModel : NULL ) );
+					GetKeyValuesReply _rep = wait( loadBalance(beginServer.second, &StorageServerInterface::getKeyValues, req, info.taskID, false, cx->enableLocalityLoadBalance ? &cx->queueModel : NULL ) );
 					rep = _rep;
 					++cx->transactionPhysicalReadsCompleted;
 				} catch(Error&) {
@@ -2701,7 +2701,7 @@ ACTOR static Future<Void> tryCommit( Database cx, Reference<TransactionLogInfo> 
 				reply = proxies.size() ? throwErrorOr ( brokenPromiseToMaybeDelivered ( proxies[0].commit.tryGetReply(req) ) ) : Never();
 			}
 		} else {
-			reply = loadBalance( cx->getMasterProxies(info.useProvisionalProxies), &MasterProxyInterface::commit, req, TaskPriority::DefaultPromiseEndpoint, true );
+			reply = loadBalance( cx->getMasterProxies(info.useProvisionalProxies), &MasterProxyInterface::commit, req, info.taskID, true );
 		}
 
 		choose {
