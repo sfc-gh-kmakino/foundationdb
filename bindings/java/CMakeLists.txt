@@ -148,7 +148,6 @@ target_include_directories(fdb_java PRIVATE ${JNI_INCLUDE_DIRS})
 target_link_libraries(fdb_java PRIVATE fdb_c)
 set_target_properties(fdb_java PROPERTIES
   LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lib/${SYSTEM_NAME}/${ARCH_NAME}/)
-endif()
 if(APPLE)
   set_target_properties(fdb_java PROPERTIES SUFFIX ".jnilib")
 endif()
